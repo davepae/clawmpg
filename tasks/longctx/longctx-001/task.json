@@ -1,0 +1,18 @@
+{
+  "id": "longctx-001",
+  "cycle": "longctx",
+  "title": "Trace inflated order totals and map the architecture",
+  "prompt": "Customers report that order totals are far too high: an order of 2 items at $10 each totals 180.0 instead of 21.6 (8% tax). Trace the cause across the codebase and fix it in the right place. Also write docs/ARCHITECTURE.md describing every module in the shop package and how an order total is computed end to end.",
+  "human_minutes": 40,
+  "timeout_s": 2400,
+  "scope": ["shop/*", "docs/*", "tests/*"],
+  "extra_checks": [
+    {"type": "exists", "path": "docs/ARCHITECTURE.md"},
+    {"type": "contains", "path": "docs/ARCHITECTURE.md", "pattern": "pricing", "flags": "i"},
+    {"type": "contains", "path": "docs/ARCHITECTURE.md", "pattern": "tax", "flags": "i"},
+    {"type": "contains", "path": "docs/ARCHITECTURE.md", "pattern": "orders", "flags": "i"},
+    {"type": "contains", "path": "docs/ARCHITECTURE.md", "pattern": "reports", "flags": "i"},
+    {"type": "contains", "path": "docs/ARCHITECTURE.md", "pattern": "config", "flags": "i"}
+  ],
+  "solution_deletes": []
+}

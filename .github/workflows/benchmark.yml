@@ -1,0 +1,51 @@
+name: benchmark
+
+# Manual run of the full suite against a real agent. The runner needs the agent CLI
+# installed and its credentials supplied as repository secrets. Install steps below are
+# placeholders: edit them for the agent you are rating, and check its current docs.
+# Rating a *subscription* (Claude Pro, Copilot Pro) needs that account's login on the runner,
+# not an API key: an API key bills the API instead of the plan. Prefer a self-hosted runner
+# signed in to the plan; the claude-code adapter strips ANTHROPIC_API_KEY from the agent's env.
+on:
+  workflow_dispatch:
+    inputs:
+      adapter:
+        description: "Adapter: claude-code | copilot-cli | custom"
+        required: true
+      plan:
+        description: "Plan label recorded in the result (e.g. Claude Pro)"
+        required: false
+      attempts:
+        description: "Max attempts per task"
+        default: "1"
+      budget_usd:
+        description: "Budget used for the endurance figure"
+        default: "20"
+
+jobs:
+  rate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      # TODO: install the agent CLI under test here (npm i -g ..., pip install aider-chat, ...)
+      - name: Run suite
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: >
+          python -m oer run
+          --adapter "${{ inputs.adapter }}"
+          --plan "${{ inputs.plan }}"
+          --attempts "${{ inputs.attempts }}"
+          --budget-usd "${{ inputs.budget_usd }}"
+          --out results/${{ inputs.adapter }}.json
+      - run: python -m oer validate results/${{ inputs.adapter }}.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: oer-result-${{ inputs.adapter }}
+          path: results/${{ inputs.adapter }}.json

@@ -1,0 +1,38 @@
+{
+  "_note": "Starting points only. Agent CLIs change flags often. claude-code was exercised live on 2026-11-06 (flags, JSON cost, model reporting); copilot-cli is built from GitHub's CLI docs and has NOT been run. The rest are untested. Check each against the tool's current --help before publishing a rating.",
+  "claude-code": {
+    "command": ["claude", "-p", "{prompt}", "--output-format", "json", "--permission-mode", "acceptEdits",
+                "--model", "{model}", "--effort", "{effort}", "--allowedTools", "Bash,Edit,Write,Read,Glob,Grep"],
+    "parser": "claude_json",
+    "model_id": "claude-sonnet-5-5",
+    "effort_mode": "flag",
+    "plan": "Claude Pro",
+    "env_unset": ["ANTHROPIC_API_KEY"],
+    "exhaustion_pattern": "usage limit|limit reached|out of (usage|credits)",
+    "verified": "live-tested: flags, cost, model reporting"
+  },
+  "copilot-cli": {
+    "command": ["copilot", "-p", "{prompt}", "--allow-all-tools", "--no-ask-user", "--model={model}"],
+    "parser": "none",
+    "model_id": "claude-sonnet-5.5",
+    "effort_mode": "settings",
+    "plan": "Copilot Pro",
+    "exhaustion_pattern": "usage limit|limit reached|out of (usage|credits)|included usage",
+    "verified": false
+  },
+  "codex": {
+    "command": ["codex", "exec", "{prompt}"],
+    "parser": "none",
+    "verified": false
+  },
+  "aider": {
+    "command": ["aider", "--yes-always", "--no-auto-commits", "--message", "{prompt}"],
+    "parser": "none",
+    "verified": false
+  },
+  "cursor-agent": {
+    "command": ["cursor-agent", "-p", "{prompt}"],
+    "parser": "none",
+    "verified": false
+  }
+}

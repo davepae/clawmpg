@@ -1,0 +1,13 @@
+{
+  "id": "city-002",
+  "cycle": "city",
+  "title": "Rename calc_total to compute_total",
+  "prompt": "Rename the function calc_total to compute_total everywhere in the shop package, updating every caller. Keep behaviour identical and do not leave a backwards-compatible alias. Update the tests accordingly.",
+  "human_minutes": 15,
+  "timeout_s": 600,
+  "scope": ["shop/*", "tests/*", "README.md"],
+  "extra_checks": [
+    {"type": "not_contains", "glob": "shop/*.py", "pattern": "calc_total"}
+  ],
+  "solution_deletes": []
+}

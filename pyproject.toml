@@ -1,0 +1,15 @@
+[project]
+name = "openclaw-oer"
+version = "0.1.0"
+description = "OpenClaw Efficiency Rating: an EPA-style efficiency benchmark for AI coding agents"
+requires-python = ">=3.10"
+dependencies = ["pytest>=7"]
+
+[project.optional-dependencies]
+dev = ["jsonschema>=4"]
+
+[project.scripts]
+oer = "oer.__main__:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

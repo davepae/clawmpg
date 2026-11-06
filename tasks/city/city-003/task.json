@@ -1,0 +1,11 @@
+{
+  "id": "city-003",
+  "cycle": "city",
+  "title": "Add logging to place_order",
+  "prompt": "Add INFO-level logging to shop.orders.place_order using the standard logging module with a logger named 'shop.orders'. Each call must log one message containing 'items=<number of line items>' and 'subtotal=<subtotal>', for example: placed order: items=2 subtotal=25.0",
+  "human_minutes": 10,
+  "timeout_s": 600,
+  "scope": ["shop/orders.py", "tests/*"],
+  "extra_checks": [],
+  "solution_deletes": []
+}

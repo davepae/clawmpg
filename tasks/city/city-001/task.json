@@ -1,0 +1,11 @@
+{
+  "id": "city-001",
+  "cycle": "city",
+  "title": "Fix failing discount test",
+  "prompt": "The test tests/test_pricing.py::test_apply_discount is failing. Find the bug in the library and fix it. Do not edit the test.",
+  "human_minutes": 10,
+  "timeout_s": 600,
+  "scope": ["shop/pricing.py", "tests/*"],
+  "extra_checks": [],
+  "solution_deletes": []
+}

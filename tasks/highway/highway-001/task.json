@@ -1,0 +1,13 @@
+{
+  "id": "highway-001",
+  "cycle": "highway",
+  "title": "Bulk discount feature",
+  "prompt": "Add a bulk discount feature. In shop/pricing.py add bulk_discount(items, min_qty=10, percent=5): if the total quantity across all (price, qty) items is at least min_qty, return the items' total reduced by percent percent, otherwise return the undiscounted total. Extend shop.orders.place_order with a keyword argument bulk=False; when True the order's subtotal must be the bulk-discounted total. Add tests for the new behaviour and mention the feature in README.md.",
+  "human_minutes": 45,
+  "timeout_s": 1800,
+  "scope": ["shop/pricing.py", "shop/orders.py", "tests/*", "README.md", "docs/*"],
+  "extra_checks": [
+    {"type": "contains", "path": "README.md", "pattern": "bulk", "flags": "i"}
+  ],
+  "solution_deletes": []
+}

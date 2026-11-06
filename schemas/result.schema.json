@@ -1,0 +1,416 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/openclaw/result.schema.json",
+  "title": "OER result",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "suite_version",
+    "run_id",
+    "started_at",
+    "synthetic",
+    "system",
+    "config",
+    "coverage",
+    "depleted",
+    "tasks",
+    "summary",
+    "cohort"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "suite_version": {
+      "type": "string"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "started_at": {
+      "type": "string"
+    },
+    "synthetic": {
+      "type": "boolean"
+    },
+    "system": {
+      "type": "object",
+      "required": [
+        "system"
+      ],
+      "properties": {
+        "system": {
+          "type": "string"
+        },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "model_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "effort": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "plan": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "model_verified": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "observed_models": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "environment": {
+      "type": "object"
+    },
+    "config": {
+      "type": "object",
+      "required": [
+        "cycles",
+        "sessions",
+        "max_attempts",
+        "budget_usd"
+      ],
+      "properties": {
+        "cycles": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "city",
+              "highway",
+              "heavy",
+              "longctx",
+              "autonomous"
+            ]
+          }
+        },
+        "sessions": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_attempts": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "budget_usd": {
+          "type": "number",
+          "minimum": 0
+        },
+        "stop_at_usd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "suite_tasks": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "coverage": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "depleted": {
+      "type": "boolean"
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "task_id",
+          "cycle",
+          "session",
+          "ocm_available",
+          "ocm_earned",
+          "passed",
+          "attempts",
+          "interventions",
+          "cost_usd",
+          "cost_basis",
+          "wall_s",
+          "quality"
+        ],
+        "properties": {
+          "task_id": {
+            "type": "string"
+          },
+          "cycle": {
+            "enum": [
+              "city",
+              "highway",
+              "heavy",
+              "longctx",
+              "autonomous"
+            ]
+          },
+          "session": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "title": {
+            "type": "string"
+          },
+          "human_minutes": {
+            "type": "number"
+          },
+          "ocm_available": {
+            "type": "number",
+            "minimum": 0
+          },
+          "ocm_earned": {
+            "type": "number",
+            "minimum": 0
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "attempts": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "interventions": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "cost_usd": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "cost_basis": {
+            "enum": [
+              "metered",
+              "token_estimate",
+              "quota_fraction",
+              "manual",
+              "synthetic",
+              "unknown",
+              "mixed",
+              "ledger_apportioned"
+            ]
+          },
+          "tokens_in": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "tokens_out": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "wall_s": {
+            "type": "number",
+            "minimum": 0
+          },
+          "quality": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "timed_out": {
+            "type": "boolean"
+          },
+          "agent_exit_code": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "changed_files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "check_failures": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "log_tail": {
+            "type": "string"
+          },
+          "quota_exhausted": {
+            "type": "boolean"
+          },
+          "observed_models": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "all_runs_reported_model": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "overall_oer",
+        "cycles",
+        "human_takeover_rate",
+        "ocm_earned",
+        "ocm_per_usd",
+        "ocm_per_hour",
+        "session_endurance",
+        "estimated_monthly_cost_usd",
+        "budget_usd"
+      ],
+      "properties": {
+        "overall_oer": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "cycles": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "oer",
+              "components"
+            ],
+            "properties": {
+              "oer": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "components": {
+                "type": "object",
+                "required": [
+                  "success",
+                  "cost",
+                  "autonomy",
+                  "speed",
+                  "quality"
+                ],
+                "additionalProperties": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              }
+            }
+          }
+        },
+        "human_takeover_rate": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "ocm_earned": {
+          "type": "number"
+        },
+        "ocm_per_usd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "ocm_per_hour": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "session_endurance": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "estimated_monthly_cost_usd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "budget_usd": {
+          "type": "number"
+        },
+        "endurance_basis": {
+          "enum": [
+            "measured",
+            "projected",
+            null
+          ]
+        }
+      }
+    },
+    "cohort": {
+      "type": "object",
+      "required": [
+        "pinned",
+        "model",
+        "effort"
+      ],
+      "properties": {
+        "pinned": {
+          "type": "boolean"
+        },
+        "model": {
+          "type": "string"
+        },
+        "effort": {
+          "type": "string"
+        }
+      }
+    },
+    "depletion_reason": {
+      "enum": [
+        "usd_cap",
+        "quota",
+        null
+      ]
+    },
+    "quota_exhausted_task": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "ledger_total_usd": {
+      "type": "number"
+    }
+  }
+}

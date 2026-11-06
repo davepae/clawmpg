@@ -1,0 +1,14 @@
+{
+  "id": "autonomous-001",
+  "cycle": "autonomous",
+  "title": "Coupon codes feature",
+  "prompt": "Implement coupon support end to end. Add shop/coupons.py with class InvalidCoupon(ValueError) and redeem(code, amount) -> float. Codes are case-insensitive: SAVE10 takes 10 percent off, FLAT5 takes 5 off (never returning below 0). Any other code raises InvalidCoupon. Extend shop.orders.place_order with coupon=None. Order of operations: subtotal, then the percentage discount_percent, then the coupon, then tax. The returned dict must gain a 'net' key (amount after discount and coupon, before tax) and, when a coupon was used, a 'coupon' key with the code. Add tests in tests/ for the feature, document it in README.md, and run the test suite before finishing. Do not ask questions; make reasonable decisions.",
+  "human_minutes": 90,
+  "timeout_s": 3600,
+  "scope": ["shop/*", "tests/*", "README.md", "docs/*"],
+  "extra_checks": [
+    {"type": "contains", "path": "README.md", "pattern": "coupon", "flags": "i"},
+    {"type": "contains", "glob": "tests/*.py", "pattern": "redeem"}
+  ],
+  "solution_deletes": []
+}

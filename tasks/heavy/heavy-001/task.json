@@ -1,0 +1,14 @@
+{
+  "id": "heavy-001",
+  "cycle": "heavy",
+  "title": "Move billing code into a subpackage",
+  "prompt": "Refactor: create a subpackage shop/billing and move shop/pricing.py and shop/tax.py into it (shop.billing.pricing and shop.billing.tax). Update every import in the package and the tests. The old modules shop.pricing and shop.tax must no longer exist. Behaviour must not change.",
+  "human_minutes": 60,
+  "timeout_s": 2400,
+  "scope": ["shop/*", "tests/*", "README.md"],
+  "extra_checks": [
+    {"type": "file_absent", "path": "shop/pricing.py"},
+    {"type": "file_absent", "path": "shop/tax.py"}
+  ],
+  "solution_deletes": ["shop/pricing.py", "shop/tax.py"]
+}
