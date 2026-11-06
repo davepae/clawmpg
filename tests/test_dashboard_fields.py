@@ -151,3 +151,9 @@ def test_run_suite_records_ledger_check_and_validates(tmp_path):
                     progress=lambda *_: None)
     assert res["ledger_check"]["status"] in ("mismatch", "match", "no_reported_cost")
     jsonschema.validate(res, json.loads((ROOT / "schemas" / "result.schema.json").read_text()))
+
+
+def test_fetch_items_returns_raw_items():
+    from oer import billing
+    raw = [{"sku": "a", "grossAmount": 1.0}, {"sku": "b", "grossAmount": 2.0}]
+    assert billing.fetch_items("u", "tok", http_get=lambda url, tok: {"usageItems": raw}) == raw

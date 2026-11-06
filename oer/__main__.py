@@ -72,7 +72,8 @@ def cmd_ledger_snapshot(a: argparse.Namespace) -> int:
               file=sys.stderr)
         return 2
     try:
-        print(json.dumps(billing.fetch_snapshot(a.user, token), indent=2))
+        out = billing.fetch_items(a.user, token) if a.items else billing.fetch_snapshot(a.user, token)
+        print(json.dumps(out, indent=2))
     except billing.LedgerUnavailable as e:
         print(f"ledger unavailable: {e}", file=sys.stderr)
         return 1
@@ -158,6 +159,7 @@ def main(argv=None) -> int:
 
     ls = sub.add_parser("ledger-snapshot", help="print this month's AI-credit usage totals (checks the token works)")
     ls.add_argument("--user", required=True)
+    ls.add_argument("--items", action="store_true", help="print the raw per-item breakdown (product/model/amount)")
     ls.set_defaults(fn=cmd_ledger_snapshot)
 
     ac = sub.add_parser("apply-cost", help="set cost from the plan's usage ledger (tools with no cost output)")

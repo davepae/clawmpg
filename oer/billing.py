@@ -45,14 +45,20 @@ def _http_get(url: str, token: str, timeout: int = 20) -> dict:
         raise LedgerUnavailable(type(e).__name__) from None
 
 
+def fetch_items(user: str, token: str, now: Optional[datetime] = None,
+                http_get: Callable = _http_get) -> list:
+    now = now or datetime.now(timezone.utc)
+    url = f"{API}/users/{user}/settings/billing/ai_credit/usage?year={now.year}&month={now.month}"
+    items = http_get(url, token).get("usageItems")
+    if not isinstance(items, list):
+        raise LedgerUnavailable("unexpected response shape")
+    return items
+
+
 def fetch_snapshot(user: str, token: str, now: Optional[datetime] = None,
                    http_get: Callable = _http_get) -> dict:
     now = now or datetime.now(timezone.utc)
-    url = f"{API}/users/{user}/settings/billing/ai_credit/usage?year={now.year}&month={now.month}"
-    data = http_get(url, token)
-    items = data.get("usageItems")
-    if not isinstance(items, list):
-        raise LedgerUnavailable("unexpected response shape")
+    items = fetch_items(user, token, now, http_get)
     return {
         "at": now.isoformat(timespec="seconds"),
         "year": now.year,
