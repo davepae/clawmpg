@@ -11,5 +11,11 @@ dev = ["jsonschema>=4"]
 [project.scripts]
 oer = "oer.__main__:main"
 
+[tool.setuptools.packages.find]
+include = ["oer*"]
+
+[tool.setuptools.package-data]
+"oer.adapters" = ["presets.json"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
