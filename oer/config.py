@@ -47,6 +47,10 @@ DEFAULT_BUDGET_USD = 20.0
 # (https://docs.github.com/en/copilot/concepts/billing-and-usage/individuals/billing, read 2026-11-06).
 AI_CREDIT_USD = 0.01
 
+# What the cost was actually billed against. Only "plan_allowance" runs say anything about how far
+# a subscription goes; "extra_usage" (pay-as-you-go past a plan limit) and "api" measure the harness only.
+BILLING_MODES = ["plan_allowance", "extra_usage", "api", "unknown"]
+
 # Cohort pinned for official ratings: every system is rated running this exact model
 # at this reasoning effort, so the score isolates the harness and plan, not the model.
 PINNED = {"model": "claude-sonnet-5-5", "effort": "medium"}

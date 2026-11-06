@@ -39,6 +39,14 @@
         "null"
       ]
     },
+    "billing_mode": {
+      "enum": [
+        "plan_allowance",
+        "extra_usage",
+        "api",
+        "unknown"
+      ]
+    },
     "plan_window_start": {
       "type": [
         "string",

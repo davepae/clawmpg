@@ -42,7 +42,8 @@ def cmd_run(a: argparse.Namespace) -> int:
     try:
         result = run_suite(adapter, tasks, all_tasks, Path(a.seed_repo), sessions=a.sessions,
                            max_attempts=a.attempts, budget_usd=a.budget_usd, stop_at_usd=a.stop_at_usd,
-                           allow_unpinned=a.allow_unpinned, plan_window_start=a.plan_window_start)
+                           allow_unpinned=a.allow_unpinned, plan_window_start=a.plan_window_start,
+                           billing_mode=a.billing_mode)
     except ValueError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
@@ -111,6 +112,9 @@ def main(argv=None) -> int:
     r.add_argument("--plan", help="subscription plan label, e.g. 'Claude Pro' or 'Copilot Pro'")
     r.add_argument("--plan-window-start", help="ISO time the plan's usage window/billing period began "
                    "(for depletion runs; recorded as given, never guessed)")
+    r.add_argument("--billing-mode", choices=config.BILLING_MODES, default="unknown",
+                   help="what the cost was billed against: plan_allowance, extra_usage (pay-as-you-go past the "
+                        "plan's limit), api, or unknown (default; never guessed)")
     r.add_argument("--allow-unpinned", action="store_true", help="exploratory run with a different model/effort")
     r.add_argument("--command", help="custom adapter command with {prompt}/{workdir}/{model} placeholders")
     r.add_argument("--cost-per-run", type=float, help="fallback USD per agent run when the tool reports no cost")

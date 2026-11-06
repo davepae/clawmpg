@@ -32,6 +32,11 @@ def render_epa(result: dict) -> str:
         lines.append(f"*** TOOL REPORTED OTHER MODELS: {', '.join(sysd.get('observed_models', []))} ***")
     elif sysd.get("model_verified") is None and not result.get("synthetic"):
         lines.append("*** MODEL NOT REPORTED BY TOOL: PIN IS DECLARED, NOT VERIFIED ***")
+    mode = result.get("billing_mode", "unknown")
+    if mode in ("extra_usage", "api"):
+        lines.append(f"*** BILLING MODE {mode.upper()}: NOT A PLAN-ALLOWANCE MEASUREMENT; ENDURANCE IS PROJECTED ***")
+    elif mode == "unknown" and not result.get("synthetic"):
+        lines.append("*** BILLING MODE NOT STATED: DO NOT READ COST AS PLAN USAGE ***")
     if s["total_cost_usd"] is None:
         lines.append("*** COST UNKNOWN FOR AT LEAST ONE TASK: COST SCORES ARE 0 ***")
     lines += ["", "System:", f"  {name}", "", f"Overall OER: {s['overall_oer']:.0f}", ""]
