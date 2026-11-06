@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import platform
+import subprocess
 import sys
 import tempfile
 import uuid
@@ -96,6 +97,19 @@ def run_task(adapter: Adapter, task: Task, seed_repo: Path, session: int, max_at
     }
 
 
+def harness_commit() -> Optional[str]:
+    """Git commit of the harness, with +dirty if the working tree has changes; None outside git."""
+    repo = Path(__file__).resolve().parent.parent
+    try:
+        head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, capture_output=True, text=True, timeout=10)
+        if head.returncode != 0:
+            return None
+        dirty = subprocess.run(["git", "status", "--porcelain"], cwd=repo, capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return head.stdout.strip() + ("+dirty" if dirty.stdout.strip() else "")
+
+
 def cohort_status(system: dict, synthetic: bool) -> dict:
     """Is the declared model/effort the pinned cohort? (Synthetic runs are never pinned.)"""
     pinned = (not synthetic
@@ -115,7 +129,7 @@ def model_verification(runs: list[dict]) -> tuple[Optional[bool], list[str]]:
 def run_suite(adapter: Adapter, tasks: list[Task], all_tasks: list[Task], seed_repo: Path, *,
               sessions: int = 1, max_attempts: int = 1, budget_usd: float = config.DEFAULT_BUDGET_USD,
               stop_at_usd: Optional[float] = None, allow_unpinned: bool = False,
-              progress=print) -> dict:
+              plan_window_start: Optional[str] = None, progress=print) -> dict:
     synthetic = bool(getattr(adapter, "synthetic", False))
     system = adapter.describe()
     cohort = cohort_status(system, synthetic)
@@ -161,6 +175,9 @@ def run_suite(adapter: Adapter, tasks: list[Task], all_tasks: list[Task], seed_r
         "suite_version": config.SUITE_VERSION,
         "run_id": uuid.uuid4().hex[:12],
         "started_at": started.isoformat(timespec="seconds"),
+        "finished_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "harness_commit": harness_commit(),
+        "plan_window_start": plan_window_start,
         "synthetic": synthetic,
         "system": system,
         "cohort": cohort,
