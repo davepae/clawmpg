@@ -39,6 +39,22 @@
         "null"
       ]
     },
+    "ledger_check": {
+      "type": "object",
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "match",
+            "mismatch",
+            "unavailable",
+            "no_reported_cost"
+          ]
+        }
+      }
+    },
     "billing_mode": {
       "enum": [
         "plan_allowance",

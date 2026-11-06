@@ -11,6 +11,7 @@ from pathlib import Path
 
 from oer import config, report
 from oer.ledger import apply_ledger_cost
+from oer import billing
 from oer.adapters import build_adapter
 from oer.runner import run_suite
 from oer.tasks import load_tasks
@@ -32,6 +33,14 @@ def cmd_run(a: argparse.Namespace) -> int:
         except ValueError:
             print(f"error: --plan-window-start must be an ISO timestamp, got {a.plan_window_start!r}", file=sys.stderr)
             return 2
+    watch = None
+    if a.ledger_user:
+        token = billing.token_from_env()
+        if not token:
+            print(f"error: --ledger-user needs a fine-grained token with the 'Plan' user permission (read) "
+                  f"in ${billing.TOKEN_ENV}", file=sys.stderr)
+            return 2
+        watch = billing.LedgerWatch(a.ledger_user, token)
     all_tasks = load_tasks(Path(a.tasks))
     cycles = a.cycles.split(",") if a.cycles else None
     ids = a.ids.split(",") if a.ids else None
@@ -43,7 +52,7 @@ def cmd_run(a: argparse.Namespace) -> int:
         result = run_suite(adapter, tasks, all_tasks, Path(a.seed_repo), sessions=a.sessions,
                            max_attempts=a.attempts, budget_usd=a.budget_usd, stop_at_usd=a.stop_at_usd,
                            allow_unpinned=a.allow_unpinned, plan_window_start=a.plan_window_start,
-                           billing_mode=a.billing_mode)
+                           billing_mode=a.billing_mode, ledger_watch=watch)
     except ValueError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
@@ -53,6 +62,20 @@ def cmd_run(a: argparse.Namespace) -> int:
     print()
     print(report.render_epa(result))
     print(f"\nresult written to {out}")
+    return 0
+
+
+def cmd_ledger_snapshot(a: argparse.Namespace) -> int:
+    token = billing.token_from_env()
+    if not token:
+        print(f"error: set ${billing.TOKEN_ENV} to a fine-grained token with the 'Plan' user permission (read)",
+              file=sys.stderr)
+        return 2
+    try:
+        print(json.dumps(billing.fetch_snapshot(a.user, token), indent=2))
+    except billing.LedgerUnavailable as e:
+        print(f"ledger unavailable: {e}", file=sys.stderr)
+        return 1
     return 0
 
 
@@ -115,6 +138,8 @@ def main(argv=None) -> int:
     r.add_argument("--billing-mode", choices=config.BILLING_MODES, default="unknown",
                    help="what the cost was billed against: plan_allowance, extra_usage (pay-as-you-go past the "
                         "plan's limit), api, or unknown (default; never guessed)")
+    r.add_argument("--ledger-user", help="GitHub username: cross-check reported cost against GitHub's AI-credit "
+                   f"usage API before/after the run (token in ${billing.TOKEN_ENV}; never written to results)")
     r.add_argument("--allow-unpinned", action="store_true", help="exploratory run with a different model/effort")
     r.add_argument("--command", help="custom adapter command with {prompt}/{workdir}/{model} placeholders")
     r.add_argument("--cost-per-run", type=float, help="fallback USD per agent run when the tool reports no cost")
@@ -130,6 +155,10 @@ def main(argv=None) -> int:
     r.add_argument("--mock-seed", default="0")
     r.add_argument("--out")
     r.set_defaults(fn=cmd_run)
+
+    ls = sub.add_parser("ledger-snapshot", help="print this month's AI-credit usage totals (checks the token works)")
+    ls.add_argument("--user", required=True)
+    ls.set_defaults(fn=cmd_ledger_snapshot)
 
     ac = sub.add_parser("apply-cost", help="set cost from the plan's usage ledger (tools with no cost output)")
     ac.add_argument("result")
