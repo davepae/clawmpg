@@ -14,7 +14,7 @@
   "copilot-cli": {
     "command": ["copilot", "-p", "{prompt}", "--allow-all-tools", "--no-ask-user", "--model={model}",
                 "--reasoning-effort", "{effort}", "--trust-folder", "--output-format", "json"],
-    "parser": "none",
+    "parser": "copilot_jsonl",
     "model_id": "claude-sonnet-5.5",
     "effort_mode": "flag",
     "plan": "Copilot Pro",
