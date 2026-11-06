@@ -45,7 +45,9 @@ def render_epa(result: dict) -> str:
             lines.append(f"Ledger cross-check ({lc['source']}): {lc['status'].upper()}: ledger moved "
                          f"${lc['delta_usd']:.4f} vs tool-reported ${lc['reported_usd']:.4f} (account-wide)")
         else:
-            lines.append(f"Ledger cross-check: {lc['status']}" + (f" ({lc['note']})" if lc.get("note") else ""))
+            extra = " (run `oer ledger-settle` hours later; the usage API lags)" if lc["status"] == "pending" \
+                else (f" ({lc['note']})" if lc.get("note") else "")
+            lines.append(f"Ledger cross-check: {lc['status']}{extra}")
     lines += ["", "System:", f"  {name}", "", f"Overall OER: {s['overall_oer']:.0f}", ""]
     for c in config.CYCLES:
         cs = s["cycles"].get(c)
