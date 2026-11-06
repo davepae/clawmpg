@@ -50,6 +50,7 @@
             "match",
             "mismatch",
             "unavailable",
+            "not_updated",
             "no_reported_cost"
           ]
         }

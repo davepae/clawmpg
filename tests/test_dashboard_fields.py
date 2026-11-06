@@ -130,7 +130,7 @@ def test_ledger_failure_is_recorded_not_fatal():
     watch = billing.LedgerWatch("u", "t", http_get=boom, sleep=lambda s: None)
     watch.start()
     check = watch.finish(0.1)
-    assert check["status"] == "unavailable" and check["errors"] == ["before: HTTP 403", "after: HTTP 403"]
+    assert check["status"] == "unavailable" and check["errors"] == ["before: HTTP 403"]
 
 
 def test_ledger_unexpected_shape_and_month_boundary():
@@ -145,11 +145,11 @@ def test_ledger_unexpected_shape_and_month_boundary():
 def test_run_suite_records_ledger_check_and_validates(tmp_path):
     import jsonschema
     from oer import billing
-    readings = iter([_usage(1.0)] + [_usage(1.0)] * 4)
+    readings = iter([_usage(1.0)] * 40)
     watch = billing.LedgerWatch("u", "t", http_get=lambda u, t: next(readings), sleep=lambda s: None)
     res = run_suite(build_adapter("mock"), TASKS[:1], TASKS, ROOT / "seed_repo", ledger_watch=watch,
                     progress=lambda *_: None)
-    assert res["ledger_check"]["status"] in ("mismatch", "match", "no_reported_cost")
+    assert res["ledger_check"]["status"] in ("mismatch", "match", "no_reported_cost", "not_updated")
     jsonschema.validate(res, json.loads((ROOT / "schemas" / "result.schema.json").read_text()))
 
 
@@ -157,3 +157,31 @@ def test_fetch_items_returns_raw_items():
     from oer import billing
     raw = [{"sku": "a", "grossAmount": 1.0}, {"sku": "b", "grossAmount": 2.0}]
     assert billing.fetch_items("u", "tok", http_get=lambda url, tok: {"usageItems": raw}) == raw
+
+
+def _multi(sonnet55, other):
+    return {"usageItems": [
+        {"model": "Claude Sonnet 5.5", "grossAmount": sonnet55},
+        {"model": "Claude Sonnet 5", "grossAmount": other}]}
+
+
+def test_ledger_filters_to_pinned_model_and_waits_for_lag():
+    from oer import billing
+    readings = iter([_multi(5.00, 2.00),
+                     _multi(5.00, 2.00), _multi(5.00, 2.00),
+                     _multi(5.40, 9.00), _multi(5.40, 9.00)])
+    watch = billing.LedgerWatch("u", "t", http_get=lambda u, t: next(readings), sleep=lambda s: None,
+                                model="claude-sonnet-5-5")
+    watch.start()
+    check = watch.finish(0.40)
+    assert check["status"] == "match" and check["delta_usd"] == pytest.approx(0.40)
+    assert check["after"]["settled"] is True and check["model_filter"] == "claude-sonnet-5-5"
+
+
+def test_ledger_never_moving_is_not_updated_not_mismatch():
+    from oer import billing
+    watch = billing.LedgerWatch("u", "t", http_get=lambda u, t: _multi(5.0, 2.0), sleep=lambda s: None,
+                                model="claude-sonnet-5-5")
+    watch.start()
+    check = watch.finish(0.40)
+    assert check["status"] == "not_updated"
