@@ -40,7 +40,8 @@ def cmd_run(a: argparse.Namespace) -> int:
             print(f"error: --ledger-user needs a fine-grained token with the 'Plan' user permission (read) "
                   f"in ${billing.TOKEN_ENV}", file=sys.stderr)
             return 2
-        watch = billing.LedgerWatch(a.ledger_user, token)
+        watch = billing.LedgerWatch(a.ledger_user, token,
+                                    model=None if a.allow_unpinned else config.PINNED["model"])
     all_tasks = load_tasks(Path(a.tasks))
     cycles = a.cycles.split(",") if a.cycles else None
     ids = a.ids.split(",") if a.ids else None
