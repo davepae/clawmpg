@@ -61,13 +61,30 @@ def test_model_verification_flags_other_models():
     assert model_verification([silent])[0] is None
 
 
-def test_copilot_effort_must_match_settings(tmp_path, monkeypatch):
+def test_settings_effort_mode_must_match_settings(tmp_path, monkeypatch):
     monkeypatch.setenv("COPILOT_HOME", str(tmp_path))
     (tmp_path / "settings.json").write_text(json.dumps({"effortLevel": "low"}))
     with pytest.raises(ValueError, match="effortLevel"):
-        build_adapter("copilot-cli")
+        CliAdapter("x", ["true"], effort="medium", effort_mode="settings")
     (tmp_path / "settings.json").write_text(json.dumps({"effortLevel": "medium"}))
-    assert build_adapter("copilot-cli").describe()["model_id"] == "claude-sonnet-5.5"
+    CliAdapter("x", ["true"], effort="medium", effort_mode="settings")
+
+
+def test_copilot_preset_passes_pinned_model_and_effort(tmp_path):
+    a = build_adapter("copilot-cli")
+    assert a.describe()["model_id"] == "claude-sonnet-5.5"
+    argv = [x.format(prompt="p", workdir="w", model=a.model_id, effort=a.effort) for x in a.command]
+    assert "--model=claude-sonnet-5.5" in argv
+    assert argv[argv.index("--reasoning-effort") + 1] == "medium"
+
+
+def test_raw_log_dir_saves_full_output(tmp_path, monkeypatch):
+    from oer.adapters.base import AdapterRequest
+    monkeypatch.setenv("OER_RAW_LOG_DIR", str(tmp_path / "raw"))
+    cmd = [sys.executable, "-c", "print('hello'); import sys; print('oops', file=sys.stderr)"]
+    CliAdapter("x", cmd).run(AdapterRequest(prompt="p", workdir=tmp_path, timeout_s=20, task_id="t1", cycle="city"))
+    assert (tmp_path / "raw" / "t1.stdout.txt").read_text().strip() == "hello"
+    assert "oops" in (tmp_path / "raw" / "t1.stderr.txt").read_text()
 
 
 def test_cli_adapter_detects_quota_exhaustion(tmp_path):

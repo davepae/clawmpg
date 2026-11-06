@@ -1,5 +1,5 @@
 {
-  "_note": "Starting points only. Agent CLIs change flags often. claude-code was exercised live on 2026-11-06 (flags, JSON cost, model reporting); copilot-cli is built from GitHub's CLI docs and has NOT been run. The rest are untested. Check each against the tool's current --help before publishing a rating.",
+  "_note": "Starting points only. Agent CLIs change flags often. claude-code was exercised live on 2026-11-06 (flags, JSON cost, model reporting); copilot-cli flags were checked against `copilot --help` (v1.0.105) but it has NOT been run; model reporting, cost and exhaustion text are unconfirmed. The rest are untested. Check each against the tool's current --help before publishing a rating.",
   "claude-code": {
     "command": ["claude", "-p", "{prompt}", "--output-format", "json", "--permission-mode", "acceptEdits",
                 "--model", "{model}", "--effort", "{effort}", "--allowedTools", "Bash,Edit,Write,Read,Glob,Grep"],
@@ -12,10 +12,11 @@
     "verified": "live-tested: flags, cost, model reporting"
   },
   "copilot-cli": {
-    "command": ["copilot", "-p", "{prompt}", "--allow-all-tools", "--no-ask-user", "--model={model}"],
+    "command": ["copilot", "-p", "{prompt}", "--allow-all-tools", "--no-ask-user", "--model={model}",
+                "--reasoning-effort", "{effort}", "--trust-folder", "--output-format", "json"],
     "parser": "none",
     "model_id": "claude-sonnet-5.5",
-    "effort_mode": "settings",
+    "effort_mode": "flag",
     "plan": "Copilot Pro",
     "exhaustion_pattern": "usage limit|limit reached|out of (usage|credits)|included usage",
     "verified": false
