@@ -118,7 +118,7 @@ v0.1 rates **one model at one effort**: `claude-sonnet-5-5`, `medium` (`oer/conf
 
 - The runner refuses a non-pinned model or effort unless `--allow-unpinned` is passed; such runs are labelled exploratory and kept off the leaderboard.
 - **Declared vs verified.** Each result records the model the tool itself reported (`observed_models`). `model_verified` is true only if every run reported exactly the pinned model, false if anything else appeared (for example a smaller model used for background work), null if the tool never says. Claude Code reports this; the Copilot CLI is documented to show the model only in its non-silent output, so its pin is declared, not verified, until a parser is written.
-- **Effort.** Claude Code takes `--effort medium` on the command line. The Copilot CLI reads reasoning effort from `effortLevel` in `~/.copilot/settings.json` (per GitHub's CLI reference), so the adapter refuses to start unless that file already says `medium`.
+- **Effort.** Claude Code takes `--effort medium` on the command line. The Copilot CLI 1.0.105 has `--reasoning-effort <level>` (confirmed in `copilot --help`), which the preset now passes. An earlier draft relied on an `effortLevel` key in `~/.copilot/settings.json`, which I could not find in that CLI's config help; the `settings` effort mode remains in the code but no preset uses it.
 - Model ids differ per vendor (`claude-sonnet-5-5` vs `claude-sonnet-5.5`); they are normalised for comparison.
 
 ### 6.2 Subscription plans: what "depletion" means
@@ -183,7 +183,7 @@ seed_repo/   --> |  for session, task:                                          
 |---|---|---|
 | `mock` | overlays the reference solution with probability `skill`; synthetic cost/time | tested, CI |
 | `claude-code` | `claude -p ... --model claude-sonnet-5-5 --effort medium --output-format json`, parses cost, tokens and model | live-tested on 1 task |
-| `copilot-cli` | `copilot -p ... --allow-all-tools --no-ask-user --model=claude-sonnet-5.5`; effort from `settings.json`; cost via `apply-cost` | built from GitHub's docs, **not run** (CLI not installed here; the exact model id string needs checking against `/model`) |
+| `copilot-cli` | `copilot -p ... --allow-all-tools --no-ask-user --model=claude-sonnet-5.5 --reasoning-effort medium --trust-folder --output-format json`; cost via `apply-cost` | flags checked against `copilot --help` v1.0.105, **never run end to end**; model reporting, cost output and the exhaustion message are unconfirmed. Set `OER_RAW_LOG_DIR` to save full agent output while investigating |
 | `codex`, `aider`, `cursor-agent` | `CliAdapter` presets; out of scope while the cohort is pinned to Sonnet 5.5 | **untested** presets |
 | `custom` | any command with `{prompt}` `{workdir}` `{model}` placeholders | generic |
 | `manual` | prompts a human to run IDE/cloud agents (Cursor IDE, Windsurf, Copilot agent) and enter cost and interventions | generic |

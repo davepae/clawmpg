@@ -132,6 +132,12 @@ class CliAdapter(Adapter):
         if cost is None and self.cost_per_run_usd is not None:
             cost, basis = self.cost_per_run_usd, "quota_fraction"
         text = out + err
+        raw_dir = os.environ.get("OER_RAW_LOG_DIR")
+        if raw_dir:  # full agent output for debugging parsers; may contain secrets, keep it out of git
+            d = Path(raw_dir)
+            d.mkdir(parents=True, exist_ok=True)
+            (d / f"{req.task_id}.stdout.txt").write_text(out)
+            (d / f"{req.task_id}.stderr.txt").write_text(err)
         failed = exit_code != 0 or parsed.get("is_error", False)
         exhausted = bool(self.exhaustion and failed and self.exhaustion.search(text))
         return AdapterResult(

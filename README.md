@@ -14,7 +14,7 @@ python -m pytest -q                         # scoring, suite integrity, mock end
 
 python -m oer run --adapter mock --mock-skill 0.8        # synthetic demo, prints the EPA report
 python -m oer run --adapter claude-code                  # Claude Code, Sonnet 5.5 @ medium (needs CLI + login)
-python -m oer run --adapter copilot-cli                  # Copilot CLI (set effortLevel=medium in ~/.copilot/settings.json first)
+python -m oer run --adapter copilot-cli                  # Copilot CLI (effort is passed with --reasoning-effort; flags checked vs v1.0.105, not yet run)
 python -m oer apply-cost results/RUN.json --total-usd 3.2   # credits used, read from the Copilot usage page
 python -m oer run --adapter claude-code --sessions 50    # keep going; stops when the plan's usage limit is hit
 python -m oer run --adapter manual --plan "Copilot Pro in VS Code"   # IDE agents, you drive them
