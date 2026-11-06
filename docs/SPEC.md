@@ -208,6 +208,48 @@ Session Endurance: 12 OpenClaw Sessions (on a $20 budget)
 Estimated Monthly Cost: $67 (40 sessions)
 ```
 
+### 9.1 Results dashboard (proposed, not built)
+
+A static web page that monitors and tracks results. Design only; nothing here is implemented yet.
+
+**Approach.** A static site (no server, no database) built from the committed `results/*.json` files and deployed with GitHub Pages by CI. The result files stay the single source of truth, so the page can never show a number that is not reproducible from a schema-valid file. The build recomputes every summary with `oer.scoring` and fails if it differs from the file's stored summary. A small `python -m oer site` command emits `site/data.json`, and a dependency-free HTML/JS page (for example with Chart.js) reads it.
+
+**Views.**
+1. **Head-to-head (Claude Code / Claude Pro vs Copilot CLI / Copilot Pro).** Overall OER, five cycle scores, HTR, OCM per dollar, OCM per hour, session cost, endurance, monthly cost. Every number carries its badges (below).
+2. **Run history.** OER, cost and endurance over time per system. This shows drift from CLI or model updates and the run-to-run noise floor (mean and spread once there are 3 or more sessions, see 12).
+3. **Run detail.** Per-task table: passed, OCM, cost and `cost_basis`, wall time, interventions, quality, failure log tail, observed model.
+4. **Depletion tracker.** For each plan, the cumulative spend per session against the plan budget, the point where a limit stopped the agent (if any), and the `endurance_basis` (`measured` or `projected`).
+5. **Task health.** Per-task pass rate across runs, to spot rotten or unfairly hard tasks.
+
+**Honesty rules (mandatory, from section 1).**
+- No score is shown without its `cost_basis` mix, coverage (tasks run / suite), suite version and pinned-cohort status. A score without these is not rendered.
+- Badges: `SYNTHETIC` (mock), `UNVERIFIED MODEL` (`model_verified` false or null), `PROJECTED` endurance, `PARTIAL` coverage, `EXPLORATORY` (unpinned), `UNKNOWN COST`. Synthetic, partial, unpinned and cost-unknown runs are listed in a separate "not rankable" section and never mixed into the ranked table.
+- Different suite versions are never plotted on one trend line without a visible break at the version change.
+- Plan facts and anchors shown on the page cite their source and read date, or say they could not be verified. No plan limit or price is stated without a source.
+- Held-out task contents and hidden tests are never published. The page shows aggregate per-task results only, so contamination risk does not grow.
+
+**Data flow.**
+```
+oer run -> results/<run>.json -> PR (CI: schema + recompute) -> merge to main
+        -> oer site -> site/data.json + static page -> GitHub Pages
+```
+Live in-progress monitoring is out of scope for v1 of the page. A run is published only after it finishes. A later option is for the runner to append a heartbeat file (current session, task, spend so far) that the page polls, but that needs somewhere to host it and must never expose secrets or workdir paths.
+
+**Decisions (2026-11-06).**
+- **Any run is accepted into `results/`**, including synthetic, unpinned, partial and cost-unknown runs. Nothing is rejected for being unrankable; it is labelled instead. The page still shows ranked and not-rankable runs in separate sections (honesty rules above). The leaderboard eligibility rule in section 9 is unchanged.
+- **Hosting:** public GitHub Pages is acceptable to start.
+- Because everything is public, `log_tail` and `changed_files` are published. Add redaction (home paths, tokens, env values) before the first real-agent result is committed.
+
+**Schema audit (is every view fed?).** Checked by `tests/test_dashboard_fields.py` against a mock run. Present: all run-level fields (suite version, cohort, coverage, depletion reason, model verification, summary metrics, `endurance_basis`) and all per-task fields (OCM, cost and `cost_basis`, wall time, interventions, quality, quota flag, observed models, log tail). Derivable without schema change: per-session spend, cost-basis mix, unrankable reasons.
+
+Four gaps found by the audit are now closed (and tested):
+- `system.version`: `CliAdapter` records the first line of `<tool> --version` (null if unreadable).
+- `finished_at`: run end time.
+- `harness_commit`: git HEAD of the harness, suffixed `+dirty` if the tree has uncommitted changes (null outside git). Treat `+dirty` results as not reproducible.
+- `plan_window_start`: set with `--plan-window-start ISO_TIME` and recorded exactly as given, never guessed; null otherwise. Depletion runs should always pass it.
+
+Also noted: the schema's `cost_basis` enum has `mixed`, which section 6 does not list, and per-task start times are absent. Neither is blocking; resolve when building `oer site`. This audit used mock output only, so it shows field presence, not that real Claude Code or Copilot CLI results fill them.
+
 ## 10. GitHub layout and CI/CD
 
 ```
@@ -243,5 +285,6 @@ openclaw-oer/
 3. Calibrate anchors on several real systems; freeze v1.0.
 4. Replace the quality proxy (lint, complexity delta, rubric review).
 5. Multi-session statistics: mean, confidence interval, and a published noise floor.
-6. Private held-out set and submission verification service.
-7. Verified adapters for each named tool; a quota-to-dollar convention for subscription plans.
+6. Results dashboard: static site from `results/*.json` (section 9.1).
+7. Private held-out set and submission verification service.
+8. Verified adapters for each named tool; a quota-to-dollar convention for subscription plans.

@@ -89,9 +89,19 @@ class CliAdapter(Adapter):
                     f"{name}: reasoning effort is read from the tool's settings file. Set "
                     f'"effortLevel": "{effort}" in ~/.copilot/settings.json (currently {current!r}) and retry.')
 
+    def tool_version(self) -> Optional[str]:
+        """First line of ``<tool> --version``, or None if it cannot be read."""
+        try:
+            proc = subprocess.run([self.command[0], "--version"], capture_output=True, text=True,
+                                  timeout=15, env=self._env())
+        except (OSError, subprocess.SubprocessError):
+            return None
+        lines = (proc.stdout or proc.stderr).strip().splitlines()
+        return lines[0].strip() if proc.returncode == 0 and lines else None
+
     def describe(self) -> dict:
         return {"system": self.name, "model": self.model_id, "model_id": self.model_id,
-                "effort": self.effort, "plan": self.plan, "version": None}
+                "effort": self.effort, "plan": self.plan, "version": self.tool_version()}
 
     def _env(self) -> dict:
         env = {**os.environ, **self.env}

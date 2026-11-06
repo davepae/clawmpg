@@ -30,6 +30,21 @@
     "started_at": {
       "type": "string"
     },
+    "finished_at": {
+      "type": "string"
+    },
+    "harness_commit": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "plan_window_start": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "synthetic": {
       "type": "boolean"
     },

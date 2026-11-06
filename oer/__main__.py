@@ -6,6 +6,7 @@ import argparse
 import json
 import shlex
 import sys
+from datetime import datetime
 from pathlib import Path
 
 from oer import config, report
@@ -25,6 +26,12 @@ def cmd_run(a: argparse.Namespace) -> int:
     except ValueError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
+    if a.plan_window_start:
+        try:
+            datetime.fromisoformat(a.plan_window_start)
+        except ValueError:
+            print(f"error: --plan-window-start must be an ISO timestamp, got {a.plan_window_start!r}", file=sys.stderr)
+            return 2
     all_tasks = load_tasks(Path(a.tasks))
     cycles = a.cycles.split(",") if a.cycles else None
     ids = a.ids.split(",") if a.ids else None
@@ -35,7 +42,7 @@ def cmd_run(a: argparse.Namespace) -> int:
     try:
         result = run_suite(adapter, tasks, all_tasks, Path(a.seed_repo), sessions=a.sessions,
                            max_attempts=a.attempts, budget_usd=a.budget_usd, stop_at_usd=a.stop_at_usd,
-                           allow_unpinned=a.allow_unpinned)
+                           allow_unpinned=a.allow_unpinned, plan_window_start=a.plan_window_start)
     except ValueError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
@@ -102,6 +109,8 @@ def main(argv=None) -> int:
     r.add_argument("--model-id", help=f"model id passed to the tool (default: pinned {config.PINNED['model']})")
     r.add_argument("--effort", help=f"reasoning effort (default: pinned {config.PINNED['effort']})")
     r.add_argument("--plan", help="subscription plan label, e.g. 'Claude Pro' or 'Copilot Pro'")
+    r.add_argument("--plan-window-start", help="ISO time the plan's usage window/billing period began "
+                   "(for depletion runs; recorded as given, never guessed)")
     r.add_argument("--allow-unpinned", action="store_true", help="exploratory run with a different model/effort")
     r.add_argument("--command", help="custom adapter command with {prompt}/{workdir}/{model} placeholders")
     r.add_argument("--cost-per-run", type=float, help="fallback USD per agent run when the tool reports no cost")
