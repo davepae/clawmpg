@@ -68,3 +68,27 @@ def test_cli_adapter_records_tool_version():
 
 def test_cli_adapter_version_is_none_when_unreadable():
     assert build_adapter("custom", command=["no-such-tool-xyz"]).describe()["version"] is None
+
+
+def test_billing_mode_defaults_to_unknown_and_is_recorded(result):
+    assert result["billing_mode"] == "unknown"
+
+
+def test_billing_mode_is_validated_and_shown_in_report():
+    from oer import report
+    with pytest.raises(ValueError, match="billing_mode"):
+        run_suite(build_adapter("mock"), TASKS[:1], TASKS, ROOT / "seed_repo", billing_mode="free", progress=lambda *_: None)
+    res = run_suite(build_adapter("mock"), TASKS[:1], TASKS, ROOT / "seed_repo", billing_mode="extra_usage",
+                    progress=lambda *_: None)
+    assert res["billing_mode"] == "extra_usage"
+    assert "EXTRA_USAGE" in report.render_epa(res)
+
+
+def test_extra_usage_never_yields_measured_endurance():
+    class Dry(build_adapter("mock").__class__):
+        def run(self, req):
+            out = super().run(req)
+            out.quota_exhausted = True
+            return out
+    res = run_suite(Dry(), TASKS, TASKS, ROOT / "seed_repo", billing_mode="extra_usage", progress=lambda *_: None)
+    assert res["summary"]["endurance_basis"] != "measured"

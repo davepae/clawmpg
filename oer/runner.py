@@ -129,7 +129,10 @@ def model_verification(runs: list[dict]) -> tuple[Optional[bool], list[str]]:
 def run_suite(adapter: Adapter, tasks: list[Task], all_tasks: list[Task], seed_repo: Path, *,
               sessions: int = 1, max_attempts: int = 1, budget_usd: float = config.DEFAULT_BUDGET_USD,
               stop_at_usd: Optional[float] = None, allow_unpinned: bool = False,
-              plan_window_start: Optional[str] = None, progress=print) -> dict:
+              plan_window_start: Optional[str] = None, billing_mode: str = "unknown",
+              progress=print) -> dict:
+    if billing_mode not in config.BILLING_MODES:
+        raise ValueError(f"billing_mode must be one of {config.BILLING_MODES}, got {billing_mode!r}")
     synthetic = bool(getattr(adapter, "synthetic", False))
     system = adapter.describe()
     cohort = cohort_status(system, synthetic)
@@ -169,7 +172,8 @@ def run_suite(adapter: Adapter, tasks: list[Task], all_tasks: list[Task], seed_r
     system = {**system, "model_verified": verified, "observed_models": observed}
     full_ocm = sum(t.ocm for t in all_tasks)
     run_ocm = sum(t.ocm for t in tasks)
-    measured = len(runs) / len(tasks) if reason == "quota" else None
+    # Endurance is only "measured" against a real plan allowance; past a limit on extra usage there is no cut-off.
+    measured = len(runs) / len(tasks) if reason == "quota" and billing_mode != "extra_usage" else None
     return {
         "schema_version": SCHEMA_VERSION,
         "suite_version": config.SUITE_VERSION,
@@ -178,6 +182,7 @@ def run_suite(adapter: Adapter, tasks: list[Task], all_tasks: list[Task], seed_r
         "finished_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "harness_commit": harness_commit(),
         "plan_window_start": plan_window_start,
+        "billing_mode": billing_mode,
         "synthetic": synthetic,
         "system": system,
         "cohort": cohort,
