@@ -129,7 +129,7 @@ def model_verification(runs: list[dict]) -> tuple[Optional[bool], list[str]]:
 def run_suite(adapter: Adapter, tasks: list[Task], all_tasks: list[Task], seed_repo: Path, *,
               sessions: int = 1, max_attempts: int = 1, budget_usd: float = config.DEFAULT_BUDGET_USD,
               stop_at_usd: Optional[float] = None, allow_unpinned: bool = False,
-              plan_window_start: Optional[str] = None, billing_mode: str = "unknown",
+              plan_window_start: Optional[str] = None, billing_mode: str = "unknown", ledger_watch=None,
               progress=print) -> dict:
     if billing_mode not in config.BILLING_MODES:
         raise ValueError(f"billing_mode must be one of {config.BILLING_MODES}, got {billing_mode!r}")
@@ -149,6 +149,8 @@ def run_suite(adapter: Adapter, tasks: list[Task], all_tasks: list[Task], seed_r
     reason: Optional[str] = None
     exhausted_task: Optional[str] = None
 
+    if ledger_watch:
+        ledger_watch.start()
     for session in range(1, sessions + 1):
         for task in tasks:
             if stop_at_usd is not None and spent is not None and spent >= stop_at_usd:
@@ -174,7 +176,10 @@ def run_suite(adapter: Adapter, tasks: list[Task], all_tasks: list[Task], seed_r
     run_ocm = sum(t.ocm for t in tasks)
     # Endurance is only "measured" against a real plan allowance; past a limit on extra usage there is no cut-off.
     measured = len(runs) / len(tasks) if reason == "quota" and billing_mode != "extra_usage" else None
-    return {
+    summary = scoring.summarize(runs, suite_tasks=len(tasks), budget_usd=budget_usd,
+                                measured_sessions=measured)
+    ledger_check = ledger_watch.finish(summary["total_cost_usd"]) if ledger_watch else None
+    result = {
         "schema_version": SCHEMA_VERSION,
         "suite_version": config.SUITE_VERSION,
         "run_id": uuid.uuid4().hex[:12],
@@ -200,6 +205,8 @@ def run_suite(adapter: Adapter, tasks: list[Task], all_tasks: list[Task], seed_r
         "depletion_reason": reason,
         "quota_exhausted_task": exhausted_task,
         "tasks": runs,
-        "summary": scoring.summarize(runs, suite_tasks=len(tasks), budget_usd=budget_usd,
-                                     measured_sessions=measured),
+        "summary": summary,
     }
+    if ledger_check:
+        result["ledger_check"] = ledger_check
+    return result

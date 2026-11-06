@@ -1,6 +1,7 @@
 """Audit: does a result file carry every field the dashboard views (SPEC 9.1) need?
 """
 
+import json
 import sys
 from pathlib import Path
 
@@ -92,3 +93,61 @@ def test_extra_usage_never_yields_measured_endurance():
             return out
     res = run_suite(Dry(), TASKS, TASKS, ROOT / "seed_repo", billing_mode="extra_usage", progress=lambda *_: None)
     assert res["summary"]["endurance_basis"] != "measured"
+
+
+def _usage(amount):
+    return {"timePeriod": {"year": 2026, "month": 11}, "user": "u", "usageItems": [
+        {"product": "copilot", "sku": "s", "model": "claude-sonnet-5.5", "unitType": "ai-credits",
+         "pricePerUnit": 0.01, "grossQuantity": amount * 100, "grossAmount": amount, "discountQuantity": 0,
+         "discountAmount": 0, "netQuantity": amount * 100, "netAmount": amount}]}
+
+
+def test_ledger_watch_match_and_mismatch_and_no_token_leak(result):
+    from oer import billing
+    seen = []
+    readings = iter([_usage(3.10), _usage(3.50), _usage(3.50)])
+
+    def fake_get(url, token):
+        seen.append((url, token))
+        return next(readings)
+
+    watch = billing.LedgerWatch("u", "SECRET-TOKEN", http_get=fake_get, sleep=lambda s: None)
+    watch.start()
+    check = watch.finish(0.40)
+    assert check["status"] == "match" and check["delta_usd"] == pytest.approx(0.40)
+    assert check["after"]["settled"] is True
+    assert "SECRET-TOKEN" not in json.dumps(check)
+    assert "year=" in seen[0][0] and "/users/u/settings/billing/ai_credit/usage" in seen[0][0]
+    assert billing.compare(check["before"], check["after"], 0.10)["status"] == "mismatch"
+
+
+def test_ledger_failure_is_recorded_not_fatal():
+    from oer import billing
+
+    def boom(url, token):
+        raise billing.LedgerUnavailable("HTTP 403")
+
+    watch = billing.LedgerWatch("u", "t", http_get=boom, sleep=lambda s: None)
+    watch.start()
+    check = watch.finish(0.1)
+    assert check["status"] == "unavailable" and check["errors"] == ["before: HTTP 403", "after: HTTP 403"]
+
+
+def test_ledger_unexpected_shape_and_month_boundary():
+    from oer import billing
+    with pytest.raises(billing.LedgerUnavailable):
+        billing.fetch_snapshot("u", "t", http_get=lambda u, t: {"nope": 1})
+    a = {"year": 2026, "month": 10, "gross_amount": 1.0}
+    b = {"year": 2026, "month": 11, "gross_amount": 2.0, "settled": True}
+    assert billing.compare(a, b, 1.0)["status"] == "unavailable"
+
+
+def test_run_suite_records_ledger_check_and_validates(tmp_path):
+    import jsonschema
+    from oer import billing
+    readings = iter([_usage(1.0)] + [_usage(1.0)] * 4)
+    watch = billing.LedgerWatch("u", "t", http_get=lambda u, t: next(readings), sleep=lambda s: None)
+    res = run_suite(build_adapter("mock"), TASKS[:1], TASKS, ROOT / "seed_repo", ledger_watch=watch,
+                    progress=lambda *_: None)
+    assert res["ledger_check"]["status"] in ("mismatch", "match", "no_reported_cost")
+    jsonschema.validate(res, json.loads((ROOT / "schemas" / "result.schema.json").read_text()))

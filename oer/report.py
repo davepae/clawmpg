@@ -39,6 +39,13 @@ def render_epa(result: dict) -> str:
         lines.append("*** BILLING MODE NOT STATED: DO NOT READ COST AS PLAN USAGE ***")
     if s["total_cost_usd"] is None:
         lines.append("*** COST UNKNOWN FOR AT LEAST ONE TASK: COST SCORES ARE 0 ***")
+    lc = result.get("ledger_check")
+    if lc:
+        if lc["status"] in ("match", "mismatch"):
+            lines.append(f"Ledger cross-check ({lc['source']}): {lc['status'].upper()}: ledger moved "
+                         f"${lc['delta_usd']:.4f} vs tool-reported ${lc['reported_usd']:.4f} (account-wide)")
+        else:
+            lines.append(f"Ledger cross-check: {lc['status']}")
     lines += ["", "System:", f"  {name}", "", f"Overall OER: {s['overall_oer']:.0f}", ""]
     for c in config.CYCLES:
         cs = s["cycles"].get(c)
