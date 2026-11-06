@@ -102,10 +102,10 @@ def _usage(amount):
          "discountAmount": 0, "netQuantity": amount * 100, "netAmount": amount}]}
 
 
-def test_ledger_watch_match_and_mismatch_and_no_token_leak(result):
+def test_ledger_watch_is_pending_then_settles_and_no_token_leak():
     from oer import billing
     seen = []
-    readings = iter([_usage(3.10), _usage(3.50), _usage(3.50)])
+    readings = iter([_usage(3.10), _usage(3.10), _usage(3.50)])
 
     def fake_get(url, token):
         seen.append((url, token))
@@ -113,9 +113,12 @@ def test_ledger_watch_match_and_mismatch_and_no_token_leak(result):
 
     watch = billing.LedgerWatch("u", "SECRET-TOKEN", http_get=fake_get, sleep=lambda s: None)
     watch.start()
-    check = watch.finish(0.40)
+    pending = watch.finish(0.40)
+    assert pending["status"] == "pending" and pending["user"] == "u" and len(seen) == 1
+    still = billing.settle_check(pending, "SECRET-TOKEN", http_get=fake_get)
+    assert still["status"] == "pending"
+    check = billing.settle_check(pending, "SECRET-TOKEN", http_get=fake_get)
     assert check["status"] == "match" and check["delta_usd"] == pytest.approx(0.40)
-    assert check["after"]["settled"] is True
     assert "SECRET-TOKEN" not in json.dumps(check)
     assert "year=" in seen[0][0] and "/users/u/settings/billing/ai_credit/usage" in seen[0][0]
     assert billing.compare(check["before"], check["after"], 0.10)["status"] == "mismatch"
@@ -149,7 +152,7 @@ def test_run_suite_records_ledger_check_and_validates(tmp_path):
     watch = billing.LedgerWatch("u", "t", http_get=lambda u, t: next(readings), sleep=lambda s: None)
     res = run_suite(build_adapter("mock"), TASKS[:1], TASKS, ROOT / "seed_repo", ledger_watch=watch,
                     progress=lambda *_: None)
-    assert res["ledger_check"]["status"] in ("mismatch", "match", "no_reported_cost", "not_updated")
+    assert res["ledger_check"]["status"] in ("pending",)
     jsonschema.validate(res, json.loads((ROOT / "schemas" / "result.schema.json").read_text()))
 
 
@@ -165,23 +168,14 @@ def _multi(sonnet55, other):
         {"model": "Claude Sonnet 5", "grossAmount": other}]}
 
 
-def test_ledger_filters_to_pinned_model_and_waits_for_lag():
+def test_ledger_filters_to_pinned_model_and_partial_lag():
     from oer import billing
-    readings = iter([_multi(5.00, 2.00),
-                     _multi(5.00, 2.00), _multi(5.00, 2.00),
-                     _multi(5.40, 9.00), _multi(5.40, 9.00)])
-    watch = billing.LedgerWatch("u", "t", http_get=lambda u, t: next(readings), sleep=lambda s: None,
-                                model="claude-sonnet-5-5")
+    readings = iter([_multi(5.00, 2.00), _multi(5.00, 9.00), _multi(5.10, 9.00), _multi(5.40, 9.00)])
+    watch = billing.LedgerWatch("u", "t", http_get=lambda u, t: next(readings), model="claude-sonnet-5-5")
     watch.start()
-    check = watch.finish(0.40)
+    pending = watch.finish(0.40)
+    assert billing.settle_check(pending, "t", http_get=lambda u, t: _multi(5.00, 9.00))["status"] == "pending"
+    partial = billing.settle_check(pending, "t", http_get=lambda u, t: _multi(5.10, 9.00))
+    assert partial["status"] == "mismatch" and "catching up" in partial["note"]
+    check = billing.settle_check(pending, "t", http_get=lambda u, t: _multi(5.40, 9.00))
     assert check["status"] == "match" and check["delta_usd"] == pytest.approx(0.40)
-    assert check["after"]["settled"] is True and check["model_filter"] == "claude-sonnet-5-5"
-
-
-def test_ledger_never_moving_is_not_updated_not_mismatch():
-    from oer import billing
-    watch = billing.LedgerWatch("u", "t", http_get=lambda u, t: _multi(5.0, 2.0), sleep=lambda s: None,
-                                model="claude-sonnet-5-5")
-    watch.start()
-    check = watch.finish(0.40)
-    assert check["status"] == "not_updated"

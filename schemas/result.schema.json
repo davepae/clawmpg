@@ -51,6 +51,7 @@
             "mismatch",
             "unavailable",
             "not_updated",
+            "pending",
             "no_reported_cost"
           ]
         }

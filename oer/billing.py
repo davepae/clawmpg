@@ -133,7 +133,7 @@ def compare(before: Optional[dict], after: Optional[dict], reported_usd: Optiona
         return {**out, "status": "no_reported_cost"}
     if after.get("moved") is False:
         return {**out, "status": "not_updated",
-                "note": "ledger did not change within the wait window; its data lags, so no verdict"}
+                "note": "ledger has not changed yet; its data lags, so no verdict"}
     gap = round(delta - reported_usd, 6)
     out["difference_usd"] = gap
     tol = max(TOLERANCE_ABS_USD, TOLERANCE_REL * reported_usd)
@@ -160,17 +160,32 @@ class LedgerWatch:
             self.errors.append(f"before: {e}")
 
     def finish(self, reported_usd: Optional[float]) -> dict:
-        after = None
-        try:
-            if self.before is not None:
-                after = settle(self.user, self.token, _amount(self.before, self.model), self.model,
-                               http_get=self.http_get, sleep=self.sleep)
-        except LedgerUnavailable as e:
-            self.errors.append(f"after: {e}")
-        result = compare(self.before, after, reported_usd, self.model)
+        """No waiting: the usage API lags by well over 10 minutes, so the verdict comes later
+        from `settle_check` (`oer ledger-settle`)."""
+        out = {"source": "github_ai_credit_api", "status": "pending" if self.before else "unavailable",
+               "user": self.user, "before": self.before, "reported_usd": reported_usd,
+               "model_filter": self.model}
         if self.errors:
-            result["errors"] = self.errors
-        return result
+            out["errors"] = self.errors
+        return out
+
+
+def settle_check(check: dict, token: str, http_get: Callable = _http_get) -> dict:
+    """Re-read the ledger for a stored ledger_check and return the updated check."""
+    before, model = check.get("before"), check.get("model_filter")
+    if not before or not check.get("user"):
+        return check
+    snap = fetch_snapshot(check["user"], token, http_get=http_get)
+    moved = _amount(snap, model) != _amount(before, model)
+    after = {**snap, "moved": moved, "settled": True}
+    out = compare(before, after, check.get("reported_usd"), model)
+    out["user"] = check["user"]
+    out["checked_at"] = snap["at"]
+    if moved and out["status"] == "mismatch" and out.get("difference_usd", 0) < 0:
+        out["note"] = "ledger moved less than reported; it may still be catching up, re-run ledger-settle later"
+    if out["status"] == "not_updated":
+        out["status"] = "pending"
+    return out
 
 
 def token_from_env() -> Optional[str]:

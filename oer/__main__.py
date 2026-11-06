@@ -81,6 +81,29 @@ def cmd_ledger_snapshot(a: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_ledger_settle(a: argparse.Namespace) -> int:
+    token = billing.token_from_env()
+    if not token:
+        print(f"error: set ${billing.TOKEN_ENV}", file=sys.stderr)
+        return 2
+    path = Path(a.result)
+    result = json.loads(path.read_text())
+    if not result.get("ledger_check"):
+        print("error: result has no ledger_check (run with --ledger-user)", file=sys.stderr)
+        return 2
+    try:
+        result["ledger_check"] = billing.settle_check(result["ledger_check"], token)
+    except billing.LedgerUnavailable as e:
+        print(f"ledger unavailable: {e}", file=sys.stderr)
+        return 1
+    path.write_text(json.dumps(result, indent=2))
+    lc = result["ledger_check"]
+    print(f"ledger_check: {lc['status']}" + (f" (delta ${lc['delta_usd']:.4f} vs reported ${lc['reported_usd']:.4f})"
+                                             if "delta_usd" in lc and lc.get("reported_usd") is not None else "")
+          + (f" - {lc['note']}" if lc.get("note") else ""))
+    return 0
+
+
 def cmd_apply_cost(a: argparse.Namespace) -> int:
     path = Path(a.result)
     result = apply_ledger_cost(json.loads(path.read_text()), a.total_usd)
@@ -162,6 +185,11 @@ def main(argv=None) -> int:
     ls.add_argument("--user", required=True)
     ls.add_argument("--items", action="store_true", help="print the raw per-item breakdown (product/model/amount)")
     ls.set_defaults(fn=cmd_ledger_snapshot)
+
+    st = sub.add_parser("ledger-settle", help="re-read the usage API and update a result's ledger_check "
+                                              "(run hours after the run: the API lags)")
+    st.add_argument("result")
+    st.set_defaults(fn=cmd_ledger_settle)
 
     ac = sub.add_parser("apply-cost", help="set cost from the plan's usage ledger (tools with no cost output)")
     ac.add_argument("result")
