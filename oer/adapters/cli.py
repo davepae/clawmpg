@@ -11,6 +11,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
+from oer import config
 from oer.adapters.base import Adapter, AdapterRequest, AdapterResult
 
 PRESETS_FILE = Path(__file__).with_name("presets.json")
@@ -45,7 +46,38 @@ def parse_claude_json(stdout: str) -> dict:
     }
 
 
-PARSERS = {"claude_json": parse_claude_json, "none": lambda s: {}}
+def parse_copilot_jsonl(stdout: str) -> dict:
+    """Copilot CLI ``--output-format json`` (JSONL). Cost, tokens and models come from the last
+    ``session.usage_checkpoint`` (cumulative); failure from the final ``result`` event's exitCode.
+    Event shapes observed on CLI 1.0.105 (one live run); unknown shapes yield None, never a guess."""
+    events = []
+    for line in stdout.splitlines():
+        try:
+            obj = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(obj, dict):
+            events.append(obj)
+    snapshot, exit_code = {}, None
+    for e in events:
+        if e.get("type") == "session.usage_checkpoint":
+            snapshot = (e.get("data") or {}).get("accountingSnapshot") or snapshot
+        elif e.get("type") == "result":
+            exit_code = e.get("exitCode")
+    metrics = snapshot.get("modelMetrics") or {}
+    nano = snapshot.get("totalNanoAiu")
+    complete = snapshot.get("aiCreditsStatus") == "complete"
+    usage = [m.get("usage") or {} for m in metrics.values()]
+    return {
+        "cost_usd": round(nano / 1e9 * config.AI_CREDIT_USD, 8) if isinstance(nano, (int, float)) and complete else None,
+        "tokens_in": sum(u.get("inputTokens", 0) for u in usage) if usage else None,
+        "tokens_out": sum(u.get("outputTokens", 0) for u in usage) if usage else None,
+        "observed_model": "+".join(metrics) if metrics else None,
+        "is_error": exit_code not in (None, 0),
+    }
+
+
+PARSERS = {"claude_json": parse_claude_json, "copilot_jsonl": parse_copilot_jsonl, "none": lambda s: {}}
 
 
 def copilot_settings_effort() -> Optional[str]:

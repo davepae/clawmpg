@@ -9,7 +9,7 @@ import pytest
 from oer import config, report
 from oer.adapters import build_adapter
 from oer.adapters.base import Adapter, AdapterResult
-from oer.adapters.cli import CliAdapter, parse_claude_json
+from oer.adapters.cli import CliAdapter, parse_claude_json, parse_copilot_jsonl
 from oer.ledger import apply_ledger_cost
 from oer.runner import model_verification, run_suite
 from oer.tasks import load_tasks
@@ -139,3 +139,19 @@ def test_leaderboard_only_lists_pinned_real_runs():
     unpinned = {**pinned, "cohort": {**pinned["cohort"], "pinned": False}}
     assert report.build_leaderboard([unpinned]) == []
     assert "Test Pro" in report.render_leaderboard_md(report.build_leaderboard([pinned]))
+
+
+def test_parse_copilot_jsonl_real_run_fixture():
+    text = (ROOT / "tests" / "fixtures" / "copilot_city001_trimmed.jsonl").read_text()
+    p = parse_copilot_jsonl(text)
+    assert p["observed_model"] == "claude-sonnet-5.5"
+    assert (p["tokens_in"], p["tokens_out"]) == (104856, 583)
+    assert p["cost_usd"] == pytest.approx(0.0805946)  # 8.05946 AI credits x $0.01
+    assert p["is_error"] is False
+
+
+def test_parse_copilot_jsonl_unknown_shapes_give_none_not_guesses():
+    p = parse_copilot_jsonl("not json\n{\"type\": \"result\", \"exitCode\": 1}\n")
+    assert p["cost_usd"] is None and p["observed_model"] is None and p["is_error"] is True
+    incomplete = '{"type":"session.usage_checkpoint","data":{"accountingSnapshot":{"totalNanoAiu":5,"aiCreditsStatus":"partial"}}}'
+    assert parse_copilot_jsonl(incomplete)["cost_usd"] is None

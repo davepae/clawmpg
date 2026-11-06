@@ -43,6 +43,10 @@ STANDARD_MONTH_SESSIONS = 40
 
 DEFAULT_BUDGET_USD = 20.0
 
+# GitHub AI Credits are billed at a fixed rate: 1 credit = $0.01
+# (https://docs.github.com/en/copilot/concepts/billing-and-usage/individuals/billing, read 2026-11-06).
+AI_CREDIT_USD = 0.01
+
 # Cohort pinned for official ratings: every system is rated running this exact model
 # at this reasoning effort, so the score isolates the harness and plan, not the model.
 PINNED = {"model": "claude-sonnet-5-5", "effort": "medium"}
